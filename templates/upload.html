@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>StudyBuddy AI - Upload PDF</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <h1>📄 Upload PDF</h1>
+
+    <form method="POST" enctype="multipart/form-data">
+
+        <input type="file" name="pdf" accept=".pdf" required>
+
+        <br><br>
+
+        <button type="submit">
+            Upload & Generate Summary
+        </button>
+
+    </form>
+
+    <br>
+
+    {% if message %}
+        <h3>{{ message }}</h3>
+    {% endif %}
+
+    {% if summary %}
+
+        <hr>
+
+        <h2>📚 PDF Summary</h2>
+
+        <pre style="white-space: pre-wrap;">{{ summary }}</pre>
+
+    {% endif %}
+
+    <br>
+
+    <a href="/dashboard">
+        ⬅ Back to Dashboard
+    </a>
+
+</body>
+</html>

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>StudyBuddy AI - Quiz Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <h1>📝 Quiz Generator</h1>
+
+    <form method="POST">
+
+        <label><b>Enter Topic:</b></label><br><br>
+
+        <input
+            type="text"
+            name="topic"
+            placeholder="Example: Python, DBMS, Machine Learning"
+            required
+            style="width:400px; padding:10px;"
+        >
+
+        <br><br>
+
+        <button type="submit">
+            Generate Quiz
+        </button>
+
+    </form>
+
+    <br><br>
+
+    {% if quiz %}
+
+    <h2>Generated Quiz</h2>
+
+    <pre style="white-space: pre-wrap;">{{ quiz }}</pre>
+
+    {% endif %}
+
+    <br>
+
+    <a href="{{ url_for('dashboard') }}">
+        ← Back to Dashboard
+    </a>
+
+</body>
+</html>

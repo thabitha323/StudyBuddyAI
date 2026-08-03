@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Upload History</title>
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<h2>📂 Upload History</h2>
+
+{% if uploads %}
+
+<table border="1" cellpadding="10">
+    <tr>
+        <th>File Name</th>
+        <th>Upload Date</th>
+    </tr>
+
+    {% for file in uploads %}
+    <tr>
+        <td>{{ file.filename }}</td>
+        <td>{{ file.upload_date }}</td>
+    </tr>
+    {% endfor %}
+
+</table>
+
+{% else %}
+
+<p>No uploads found.</p>
+
+{% endif %}
+
+<br>
+
+<a href="/dashboard">
+    <button>⬅ Back</button>
+</a>
+
+</body>
+</html>

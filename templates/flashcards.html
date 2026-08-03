@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>StudyBuddy AI - Flashcards</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <h1>🃏 Flashcards Generator</h1>
+
+    <form method="POST">
+
+        <input
+            type="text"
+            name="topic"
+            placeholder="Enter Topic"
+            required
+            style="width:400px;padding:10px;"
+        >
+
+        <br><br>
+
+        <button type="submit">
+            Generate Flashcards
+        </button>
+
+    </form>
+
+    <br>
+
+    {% if flashcards %}
+
+        <h2>Generated Flashcards</h2>
+
+        {% for card in flashcards %}
+
+            <div style="border:1px solid #ccc;padding:15px;margin:10px;">
+                <pre style="white-space:pre-wrap;">{{ card }}</pre>
+            </div>
+
+        {% endfor %}
+
+    {% endif %}
+
+    <br>
+
+    <a href="/dashboard">
+        ⬅ Back to Dashboard
+    </a>
+
+</body>
+</html>
