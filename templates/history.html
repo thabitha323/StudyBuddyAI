@@ -5,132 +5,90 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Quiz - StudyBuddy AI</title>
+    <title>Upload History - StudyBuddy AI</title>
 
     <link rel="stylesheet"
           href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+        .history-card {
+            background: white;
+            width: 70%;
+            margin: 20px auto;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px #ccc;
+        }
+
+        .history-card h3 {
+            color: #0d6efd;
+        }
+
+        .history-link {
+            display: inline-block;
+            background: #0d6efd;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 8px;
+            text-decoration: none;
+            margin: 10px;
+        }
+
+        .history-link:hover {
+            background: #084298;
+        }
+    </style>
 </head>
 
 <body>
 
-<div class="container">
+    <div class="container">
 
-    <h1>StudyBuddy AI Quiz</h1>
+        <h1>📂 Upload History</h1>
 
-    {% if not quiz %}
+        {% if uploads %}
 
-        <form method="POST">
+            {% for upload in uploads %}
 
-            <label for="topic">Enter Quiz Topic</label>
+                <div class="history-card">
 
-            <br><br>
+                    <h3>
+                        📄 {{ upload.filename }}
+                    </h3>
 
-            <input type="text"
-                   id="topic"
-                   name="topic"
-                   placeholder="Example: Python"
-                   required>
+                    <p>
+                        Your uploaded PDF
+                    </p>
 
-            <br><br>
+                </div>
 
-            <button type="submit">
-                Generate Quiz
-            </button>
-
-        </form>
-
-    {% else %}
-
-        {% if not submitted %}
-
-            <form method="POST">
-
-                {% for q in quiz %}
-
-                    <div class="history-card">
-
-                        <h3>
-                            Q{{ loop.index }}. {{ q.question }}
-                        </h3>
-
-                        {% for option in q.options %}
-
-                            <label>
-                                <input type="radio"
-                                       name="q{{ loop.index0 }}"
-                                       value="{{ ['A','B','C','D'][loop.index0] }}"
-                                       required>
-
-                                {{ ['A','B','C','D'][loop.index0] }})
-                                {{ option }}
-
-                            </label>
-
-                            <br>
-
-                        {% endfor %}
-
-                    </div>
-
-                    <br>
-
-                {% endfor %}
-
-                <input type="hidden"
-                       name="submit_quiz"
-                       value="yes">
-
-                <button type="submit">
-                    Submit Quiz
-                </button>
-
-            </form>
+            {% endfor %}
 
         {% else %}
 
-            <h2>Quiz Completed!</h2>
+            <div class="history-card">
 
-            <h3>
-                Your Score: {{ score }} / {{ quiz|length }}
-            </h3>
+                <h3>No Upload History</h3>
 
-            {% if score >= 8 %}
+                <p>
+                    You have not uploaded any PDF yet.
+                </p>
 
-                <p>Excellent work! Keep it up!</p>
-
-            {% elif score >= 5 %}
-
-                <p>Good job! Keep practicing.</p>
-
-            {% else %}
-
-                <p>Keep studying and try again.</p>
-
-            {% endif %}
-
-            <br>
-
-            <a href="/quiz">
-                Take Another Quiz
-            </a>
-
-            <br><br>
-
-            <a href="/history">
-                View History
-            </a>
+            </div>
 
         {% endif %}
 
-    {% endif %}
+        <br>
 
-    <br><br>
+        <a class="history-link" href="/upload">
+            📄 Upload New PDF
+        </a>
 
-    <a href="/dashboard">
-        ← Back to Dashboard
-    </a>
+        <a class="history-link" href="/dashboard">
+            ← Back to Dashboard
+        </a>
 
-</div>
+    </div>
 
 </body>
 

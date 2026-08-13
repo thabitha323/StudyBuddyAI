@@ -5,186 +5,286 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Quiz - StudyBuddy AI</title>
+    <title>Quiz Generator</title>
 
-    <link rel="stylesheet"
-          href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f4f6fb;
+        }
+
+        .header {
+            background: #4f46e5;
+            color: white;
+            padding: 18px 30px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .header a {
+            color: white;
+            text-decoration: none;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 850px;
+            margin: 30px auto;
+        }
+
+        .box {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .topic-input {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+            margin-bottom: 15px;
+        }
+
+        .generate-btn {
+            width: 100%;
+            padding: 14px;
+            background: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 17px;
+            cursor: pointer;
+        }
+
+        .question {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+        }
+
+        .question h3 {
+            margin-top: 0;
+        }
+
+        .option {
+            display: flex;
+            align-items: center;
+            border: 1px solid #ddd;
+            padding: 14px;
+            margin: 10px 0;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .option:hover {
+            background: #f0f2ff;
+        }
+
+        .option input {
+            width: 18px;
+            height: 18px;
+            margin-right: 12px;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: #16a34a;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 17px;
+            cursor: pointer;
+        }
+
+        .score-box {
+            text-align: center;
+            background: #eef2ff;
+            padding: 30px;
+            border-radius: 12px;
+        }
+
+        .score-number {
+            font-size: 40px;
+            font-weight: bold;
+            color: #4f46e5;
+        }
+
+        .dashboard-btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 13px 25px;
+            background: #4f46e5;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+        }
+    </style>
 </head>
 
 <body>
 
+<div class="header">
+
+    <h2>StudyBuddy AI</h2>
+
+    <a href="{{ url_for('dashboard') }}">
+        🏠 Dashboard
+    </a>
+
+</div>
+
+
 <div class="container">
 
-    <h1>StudyBuddy AI Quiz</h1>
+<div class="box">
 
-    <!-- Generate Quiz -->
-    {% if not quiz %}
+{% if score is not none %}
 
-        <form method="POST">
+    <!-- SCORE -->
 
-            <label for="topic">Enter Quiz Topic</label>
+    <h1>🎉 Quiz Completed!</h1>
 
-            <br><br>
+    <div class="score-box">
 
-            <input type="text"
-                   id="topic"
-                   name="topic"
-                   placeholder="Example: Agentic AI"
-                   required>
+        <h2>Your Score</h2>
 
-            <br><br>
+        <div class="score-number">
+            {{ score }} / {{ total }}
+        </div>
 
-            <button type="submit">
-                Generate Quiz
-            </button>
+        <p>
+            You answered {{ score }}
+            out of {{ total }} correctly.
+        </p>
 
-        </form>
+        <a
+            href="{{ url_for('dashboard') }}"
+            class="dashboard-btn">
 
-    {% else %}
+            🏠 Go to Dashboard
 
-        <!-- Quiz Questions -->
-        {% if not submitted %}
-
-            <form method="POST">
-
-                {% for q in quiz %}
-
-                    <div class="history-card">
-
-                        <h3>
-                            Q{{ loop.index }}. {{ q.question }}
-                        </h3>
-
-                        <br>
-
-                        {% for option in q.options %}
-
-                            <label>
-                                <input
-                                    type="radio"
-                                    name="q{{ loop.index0 }}"
-                                    value="{{ ['A','B','C','D'][loop.index0] }}"
-                                    required
-                                >
-
-                                {{ ['A','B','C','D'][loop.index0] }})
-                                {{ option }}
-
-                            </label>
-
-                            <br><br>
-
-                        {% endfor %}
-
-                    </div>
-
-                    <br>
-
-                {% endfor %}
-
-                <input type="hidden"
-                       name="submit_quiz"
-                       value="yes">
-
-                <button type="submit">
-                    Submit Quiz
-                </button>
-
-            </form>
-
-        {% else %}
-
-            <!-- Quiz Result -->
-
-            <div class="history-card">
-
-                <h2>Quiz Completed! 🎉</h2>
-
-                <h3>
-                    Your Score:
-                    {{ score }} / {{ quiz|length }}
-                </h3>
-
-                {% if score >= 8 %}
-
-                    <p>Excellent work! 🌟</p>
-
-                {% elif score >= 5 %}
-
-                    <p>Good job! Keep practicing. 👍</p>
-
-                {% else %}
-
-                    <p>Keep studying and try again. 📚</p>
-
-                {% endif %}
-
-            </div>
-
-            <br>
-
-            <!-- Correct Answers -->
-
-            <h2>Correct Answers</h2>
-
-            {% for q in quiz %}
-
-                <div class="history-card">
-
-                    <h3>
-                        Q{{ loop.index }}. {{ q.question }}
-                    </h3>
-
-                    <p>
-                        <strong>Answer:</strong>
-                        {{ q.answer }}
-                    </p>
-
-                </div>
-
-                <br>
-
-            {% endfor %}
-
-            <a href="/quiz">
-                Take Another Quiz
-            </a>
-
-            <br><br>
-
-            <a href="/history">
-                View History
-            </a>
-
-        {% endif %}
-
-    {% endif %}
-
-
-    <!-- Back to Dashboard - ALWAYS AT THE BOTTOM -->
-
-    <div style="
-        position: static !important;
-        width: 100% !important;
-        text-align: center !important;
-        margin-top: 50px !important;
-        margin-bottom: 50px !important;
-        clear: both !important;
-    ">
-
-        <a href="/dashboard"
-           style="
-               position: static !important;
-               display: inline-block !important;
-               padding: 12px 25px !important;
-               text-decoration: none !important;
-               border-radius: 8px !important;
-               margin: 0 !important;
-           ">
-            ← Back to Dashboard
         </a>
 
     </div>
+
+
+{% elif questions %}
+
+    <!-- QUESTIONS -->
+
+    <h1>📝 Quiz</h1>
+
+    {% if topic %}
+        <p style="text-align:center;">
+            Topic: <strong>{{ topic }}</strong>
+        </p>
+    {% endif %}
+
+
+    <!-- VERY IMPORTANT:
+         ONLY ONE FORM FOR ALL QUESTIONS -->
+
+    <form
+        method="POST"
+        action="{{ url_for('quiz') }}"
+    >
+
+        {% for question in questions %}
+
+        <div class="question">
+
+            <h3>
+                {{ loop.index }}.
+                {{ question.question }}
+            </h3>
+
+
+            {% for option in question.options %}
+
+            <label class="option">
+
+                <input
+                    type="radio"
+                    name="question_{{ loop.index0 }}"
+                    value="{{ loop.index0 }}"
+                    required
+                >
+
+                <span>
+                    {{ option }}
+                </span>
+
+            </label>
+
+            {% endfor %}
+
+        </div>
+
+        {% endfor %}
+
+
+        <!-- Submit identifier -->
+
+        <input
+            type="hidden"
+            name="submit_quiz"
+            value="true"
+        >
+
+
+        <button
+            type="submit"
+            class="submit-btn">
+
+            ✅ Submit Quiz
+
+        </button>
+
+    </form>
+
+
+{% else %}
+
+    <!-- ENTER TOPIC -->
+
+    <h1>📝 Quiz Generator</h1>
+
+    <form
+        method="POST"
+        action="{{ url_for('quiz') }}"
+    >
+
+        <input
+            type="text"
+            name="topic"
+            class="topic-input"
+            placeholder="Enter topic"
+            required
+        >
+
+        <button
+            type="submit"
+            class="generate-btn">
+
+            Generate 10 Questions
+
+        </button>
+
+    </form>
+
+{% endif %}
+
+</div>
 
 </div>
 
