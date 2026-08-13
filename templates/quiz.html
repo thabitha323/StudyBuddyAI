@@ -1,48 +1,192 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-    <title>StudyBuddy AI - Quiz Generator</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Quiz - StudyBuddy AI</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
 </head>
+
 <body>
 
-    <h1>📝 Quiz Generator</h1>
+<div class="container">
 
-    <form method="POST">
+    <h1>StudyBuddy AI Quiz</h1>
 
-        <label><b>Enter Topic:</b></label><br><br>
+    <!-- Generate Quiz -->
+    {% if not quiz %}
 
-        <input
-            type="text"
-            name="topic"
-            placeholder="Example: Python, DBMS, Machine Learning"
-            required
-            style="width:400px; padding:10px;"
-        >
+        <form method="POST">
 
-        <br><br>
+            <label for="topic">Enter Quiz Topic</label>
 
-        <button type="submit">
-            Generate Quiz
-        </button>
+            <br><br>
 
-    </form>
+            <input type="text"
+                   id="topic"
+                   name="topic"
+                   placeholder="Example: Agentic AI"
+                   required>
 
-    <br><br>
+            <br><br>
 
-    {% if quiz %}
+            <button type="submit">
+                Generate Quiz
+            </button>
 
-    <h2>Generated Quiz</h2>
+        </form>
 
-    <pre style="white-space: pre-wrap;">{{ quiz }}</pre>
+    {% else %}
+
+        <!-- Quiz Questions -->
+        {% if not submitted %}
+
+            <form method="POST">
+
+                {% for q in quiz %}
+
+                    <div class="history-card">
+
+                        <h3>
+                            Q{{ loop.index }}. {{ q.question }}
+                        </h3>
+
+                        <br>
+
+                        {% for option in q.options %}
+
+                            <label>
+                                <input
+                                    type="radio"
+                                    name="q{{ loop.index0 }}"
+                                    value="{{ ['A','B','C','D'][loop.index0] }}"
+                                    required
+                                >
+
+                                {{ ['A','B','C','D'][loop.index0] }})
+                                {{ option }}
+
+                            </label>
+
+                            <br><br>
+
+                        {% endfor %}
+
+                    </div>
+
+                    <br>
+
+                {% endfor %}
+
+                <input type="hidden"
+                       name="submit_quiz"
+                       value="yes">
+
+                <button type="submit">
+                    Submit Quiz
+                </button>
+
+            </form>
+
+        {% else %}
+
+            <!-- Quiz Result -->
+
+            <div class="history-card">
+
+                <h2>Quiz Completed! 🎉</h2>
+
+                <h3>
+                    Your Score:
+                    {{ score }} / {{ quiz|length }}
+                </h3>
+
+                {% if score >= 8 %}
+
+                    <p>Excellent work! 🌟</p>
+
+                {% elif score >= 5 %}
+
+                    <p>Good job! Keep practicing. 👍</p>
+
+                {% else %}
+
+                    <p>Keep studying and try again. 📚</p>
+
+                {% endif %}
+
+            </div>
+
+            <br>
+
+            <!-- Correct Answers -->
+
+            <h2>Correct Answers</h2>
+
+            {% for q in quiz %}
+
+                <div class="history-card">
+
+                    <h3>
+                        Q{{ loop.index }}. {{ q.question }}
+                    </h3>
+
+                    <p>
+                        <strong>Answer:</strong>
+                        {{ q.answer }}
+                    </p>
+
+                </div>
+
+                <br>
+
+            {% endfor %}
+
+            <a href="/quiz">
+                Take Another Quiz
+            </a>
+
+            <br><br>
+
+            <a href="/history">
+                View History
+            </a>
+
+        {% endif %}
 
     {% endif %}
 
-    <br>
 
-    <a href="{{ url_for('dashboard') }}">
-        ← Back to Dashboard
-    </a>
+    <!-- Back to Dashboard - ALWAYS AT THE BOTTOM -->
+
+    <div style="
+        position: static !important;
+        width: 100% !important;
+        text-align: center !important;
+        margin-top: 50px !important;
+        margin-bottom: 50px !important;
+        clear: both !important;
+    ">
+
+        <a href="/dashboard"
+           style="
+               position: static !important;
+               display: inline-block !important;
+               padding: 12px 25px !important;
+               text-decoration: none !important;
+               border-radius: 8px !important;
+               margin: 0 !important;
+           ">
+            ← Back to Dashboard
+        </a>
+
+    </div>
+
+</div>
 
 </body>
 </html>

@@ -76,12 +76,13 @@ body {
 
 form {
     background: white;
-    width: 350px;
-    margin: auto;
+    width: 80%;
+    max-width: 900px;
+    margin: 30px auto;
     padding: 30px;
     border-radius: 10px;
     box-shadow: 0 0 10px gray;
-    height: 300px;
+    height: auto;
 }
 
 input {
@@ -312,9 +313,3 @@ pre{
     width:80%;
     margin:auto;
 }
-
-
-
-
-
-

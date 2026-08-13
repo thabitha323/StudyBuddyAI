@@ -1,42 +1,137 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
+
 <head>
-    <title>Upload History</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Quiz - StudyBuddy AI</title>
+
     <link rel="stylesheet"
           href="{{ url_for('static', filename='css/style.css') }}">
 </head>
+
 <body>
 
-<h2>📂 Upload History</h2>
+<div class="container">
 
-{% if uploads %}
+    <h1>StudyBuddy AI Quiz</h1>
 
-<table border="1" cellpadding="10">
-    <tr>
-        <th>File Name</th>
-        <th>Upload Date</th>
-    </tr>
+    {% if not quiz %}
 
-    {% for file in uploads %}
-    <tr>
-        <td>{{ file.filename }}</td>
-        <td>{{ file.upload_date }}</td>
-    </tr>
-    {% endfor %}
+        <form method="POST">
 
-</table>
+            <label for="topic">Enter Quiz Topic</label>
 
-{% else %}
+            <br><br>
 
-<p>No uploads found.</p>
+            <input type="text"
+                   id="topic"
+                   name="topic"
+                   placeholder="Example: Python"
+                   required>
 
-{% endif %}
+            <br><br>
 
-<br>
+            <button type="submit">
+                Generate Quiz
+            </button>
 
-<a href="/dashboard">
-    <button>⬅ Back</button>
-</a>
+        </form>
+
+    {% else %}
+
+        {% if not submitted %}
+
+            <form method="POST">
+
+                {% for q in quiz %}
+
+                    <div class="history-card">
+
+                        <h3>
+                            Q{{ loop.index }}. {{ q.question }}
+                        </h3>
+
+                        {% for option in q.options %}
+
+                            <label>
+                                <input type="radio"
+                                       name="q{{ loop.index0 }}"
+                                       value="{{ ['A','B','C','D'][loop.index0] }}"
+                                       required>
+
+                                {{ ['A','B','C','D'][loop.index0] }})
+                                {{ option }}
+
+                            </label>
+
+                            <br>
+
+                        {% endfor %}
+
+                    </div>
+
+                    <br>
+
+                {% endfor %}
+
+                <input type="hidden"
+                       name="submit_quiz"
+                       value="yes">
+
+                <button type="submit">
+                    Submit Quiz
+                </button>
+
+            </form>
+
+        {% else %}
+
+            <h2>Quiz Completed!</h2>
+
+            <h3>
+                Your Score: {{ score }} / {{ quiz|length }}
+            </h3>
+
+            {% if score >= 8 %}
+
+                <p>Excellent work! Keep it up!</p>
+
+            {% elif score >= 5 %}
+
+                <p>Good job! Keep practicing.</p>
+
+            {% else %}
+
+                <p>Keep studying and try again.</p>
+
+            {% endif %}
+
+            <br>
+
+            <a href="/quiz">
+                Take Another Quiz
+            </a>
+
+            <br><br>
+
+            <a href="/history">
+                View History
+            </a>
+
+        {% endif %}
+
+    {% endif %}
+
+    <br><br>
+
+    <a href="/dashboard">
+        ← Back to Dashboard
+    </a>
+
+</div>
 
 </body>
+
 </html>
