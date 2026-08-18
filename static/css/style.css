@@ -1,9 +1,27 @@
+/* ================================
+   PART 1 - BASIC & BACKGROUND
+================================ */
+
+* {
+    box-sizing: border-box;
+}
+
 body {
     margin: 0;
     padding: 0;
     font-family: Arial, sans-serif;
-    background-color: #f4f6f9;
     text-align: center;
+
+    background-image:
+        linear-gradient(rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.35)),
+        url("https://thumbs.dreamstime.com/b/ai-machine-learning-hands-robot-human-touching-big-data-network-connection-background-science-artificial-intelligence-172987598.jpg");
+
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+
+    min-height: 100vh;
 }
 
 h1 {
@@ -11,18 +29,19 @@ h1 {
     margin-top: 100px;
     font-size: 42px;
 }
-.tagline{
-    text-align: center;
-    margin: 25px 0;
-    background-color: yellow;
 
+h2 {
+    color: #0d6efd;
 }
 
-.tagline span{
-    /* display: inline-block;
-    background-color: crimson; */
-    background-color: yellow;
-    color: black;
+.tagline {
+    text-align: center;
+    margin: 25px 0;
+}
+
+.tagline span {
+    display: inline-block;
+    background-color: crimson;
     color: white;
     padding: 10px 25px;
     border-radius: 10px;
@@ -31,77 +50,14 @@ h1 {
 }
 
 
-a {
-    text-decoration: none;
-    background-color: #0d6efd;
-    color: white;
-    padding: 12px 25px;
-    border-radius: 8px;
-    margin: 10px;
-    display: inline-block;
-    font-size: 18px;
-}
+/* ================================
+   NAVIGATION BAR
+================================ */
 
-a:hover {
-    background-color: #084298;
-}
-input{
-    width:300px;
-    padding:12px;
-    margin:10px;
-    border:1px solid #ccc;
-    border-radius:5px;
-    font-size:16px;
-}
-
-button{
-    padding:12px 25px;
-    background:#0d6efd;
-    color:white;
-    border:none;
-    border-radius:5px;
-    cursor:pointer;
-    font-size:16px;
-}
-
-button:hover{
-    background:#084298;
-}
-body {
-    background-color: #f0f4f8;
-    font-family: Arial, sans-serif;
-    text-align: center;
-    padding-top: 100px;
-}
-
-form {
-    background: white;
-    width: 80%;
-    max-width: 900px;
-    margin: 30px auto;
-    padding: 30px;
-    border-radius: 10px;
-    box-shadow: 0 0 10px gray;
-    height: auto;
-}
-
-input {
-    padding: 10px;
-    margin: 8px;
-    width: 250px;
-}
-
-button,
-input[type="submit"] {
-    padding: 10px 25px;
-    background-color: blue;
-    color: white;
-    border: none;
-    border-radius: 5px;
-}
 nav {
     background: #0d6efd;
     padding: 15px;
+    width: 100%;
 }
 
 nav h2 {
@@ -119,29 +75,112 @@ nav a {
     border-radius: 5px;
 }
 
+nav a:hover {
+    background: #e9ecef;
+}
+/* ================================
+   PART 2 - FORMS & BUTTONS
+================================ */
+
+a {
+    text-decoration: none;
+    background-color: #0d6efd;
+    color: white;
+    padding: 12px 25px;
+    border-radius: 8px;
+    margin: 10px;
+    display: inline-block;
+    font-size: 18px;
+}
+
+a:hover {
+    background-color: #084298;
+}
+
+
+/* INPUT */
+
+input {
+    width: 300px;
+    padding: 12px;
+    margin: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+}
+
+input:focus {
+    outline: none;
+    border-color: #0d6efd;
+}
+
+
+/* TEXTAREA */
+
+textarea {
+    width: 70%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+    resize: vertical;
+}
+
+
+/* BUTTON */
+
+button,
+input[type="submit"] {
+    padding: 12px 25px;
+    background: #0d6efd;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+button:hover,
+input[type="submit"]:hover {
+    background: #084298;
+}
+
+
+/* FORM */
+
+form {
+    background: rgba(255, 255, 255, 0.95);
+    width: 80%;
+    max-width: 900px;
+    margin: 30px auto;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+
+/* CARDS */
 
 .card-container {
     display: flex;
     justify-content: center;
-    flex-wrap: wrap;
     gap: 25px;
+    flex-wrap: wrap;
     margin-top: 40px;
 }
 
-
 .card {
-    background: white;
+    background: rgba(255, 255, 255, 0.95);
     width: 250px;
     padding: 25px;
+    margin: 20px;
     border-radius: 15px;
-    box-shadow: 0px 5px 15px #ccc;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
 }
-
 
 .card h2 {
     color: #0d6efd;
 }
-
 
 .card button {
     background: #0d6efd;
@@ -150,59 +189,25 @@ nav a {
     border: none;
     border-radius: 8px;
 }
-nav{
-background:#0d6efd;
-padding:15px;
-}
+/* ================================
+   PART 3 - ASK AI
+================================ */
 
-
-nav h2{
-color:white;
-display:inline;
-}
-
-
-.card-container{
-
-display:flex;
-justify-content:center;
-gap:20px;
-flex-wrap:wrap;
-
-}
-
-
-
-.card {
-    background:white;
-    margin:20px auto;
-    padding:20px;
-    width:70%;
-    border-radius:15px;
-    box-shadow:0 4px 10px #ccc;
-}
-
-
-
-.card h2{
-
-color:#0d6efd;
-
-}
-/* Ask AI Container */
 .love {
     width: 60%;
     margin: 60px auto;
     padding: 30px;
-    background: #ffffff;
+    background: rgba(255, 255, 255, 0.95);
     border-radius: 15px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
     text-align: center;
 }
 
-/* Textarea */
+
+/* ASK AI TEXTAREA */
+
 .love textarea {
-    width: 50%;
+    width: 70%;
     height: 100px;
     padding: 15px;
     font-size: 16px;
@@ -210,15 +215,16 @@ color:#0d6efd;
     border-radius: 10px;
     outline: none;
     resize: none;
-    transition: 0.3s;
 }
 
 .love textarea:focus {
     border-color: #2196F3;
-    box-shadow: 0 0 8px rgba(33,150,243,0.4);
+    box-shadow: 0 0 8px rgba(33, 150, 243, 0.4);
 }
 
-/* Button */
+
+/* ASK AI BUTTON */
+
 .love button {
     margin-top: 20px;
     padding: 12px 35px;
@@ -228,16 +234,63 @@ color:#0d6efd;
     border-radius: 8px;
     font-size: 17px;
     cursor: pointer;
-    transition: 0.3s;
 }
 
 .love button:hover {
     background: #388E3C;
-    transform: scale(1.05);
 }
 
-/* Mobile Responsive */
+
+/* AI ANSWER */
+
+pre {
+    text-align: left;
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    width: 80%;
+    margin: 20px auto;
+    white-space: pre-wrap;
+}
+
+
+/* ================================
+   MOBILE RESPONSIVE
+================================ */
+
 @media (max-width: 768px) {
+
+    body {
+        padding: 10px;
+    }
+
+    h1 {
+        font-size: 32px;
+        margin-top: 50px;
+    }
+
+    nav h2 {
+        display: block;
+        margin: 10px;
+    }
+
+    nav a {
+        display: inline-block;
+    }
+
+    form {
+        width: 95%;
+        padding: 20px;
+    }
+
+    input {
+        width: 90%;
+    }
+
+    textarea {
+        width: 90%;
+    }
+
     .love {
         width: 90%;
         padding: 20px;
@@ -246,70 +299,13 @@ color:#0d6efd;
     .love textarea {
         width: 100%;
     }
-}
-body{
-    margin: 0;
-    padding: 0;
-    font-family: Arial, sans-serif;
 
-    background-image: url("https://static.vecteezy.com/system/resources/thumbnails/029/547/367/small/abstract-technology-background-futuristic-user-interface-3d-rendering-ai-generated-photo.jpg");
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-attachment: fixed;
-}
-.tagline{
-    text-align: center;
-    margin: 20px 0;
-}
+    .card {
+        width: 90%;
+        margin: 10px auto;
+    }
 
-.tagline span{
-    background-color: crimson;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-size: 32px;
-    font-weight: bold;
-}
-body{
-    font-family: Arial, sans-serif;
-    background:#f4f4f4;
-    text-align:center;
-    padding:30px;
-}
-
-h1{
-    color:#2c3e50;
-}
-
-button{
-    background:#007bff;
-    color:white;
-    border:none;
-    padding:12px 25px;
-    border-radius:6px;
-    cursor:pointer;
-    font-size:16px;
-}
-
-button:hover{
-    background:#0056b3;
-}
-
-input,
-textarea{
-    width:70%;
-    padding:10px;
-    border:1px solid #ccc;
-    border-radius:5px;
-    font-size:16px;
-}
-
-pre{
-    text-align:left;
-    background:white;
-    padding:15px;
-    border-radius:8px;
-    width:80%;
-    margin:auto;
+    .tagline span {
+        font-size: 18px;
+    }
 }

@@ -15,11 +15,18 @@ from dotenv import load_dotenv
 import fitz
 import os
 import json
+import random
+
+
+# ==========================================
+# LOAD ENVIRONMENT
+# ==========================================
 
 load_dotenv()
 
+
 # ==========================================
-# Flask Configuration
+# FLASK CONFIGURATION
 # ==========================================
 
 app = Flask(__name__)
@@ -29,24 +36,31 @@ app.secret_key = "studybuddy_secret_key"
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///studybuddy.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+
 # ==========================================
-# Upload Folder
+# UPLOAD FOLDER
 # ==========================================
 
 UPLOAD_FOLDER = "pdf_files"
 
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+
+# ==========================================
+# DATABASE
+# ==========================================
+
 db.init_app(app)
 
 with app.app_context():
     db.create_all()
 
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
 
 # ==========================================
-# OpenRouter Configuration
+# OPENROUTER CONFIGURATION
 # ==========================================
 
 api_key = os.getenv("OPENROUTER_API_KEY")
@@ -65,101 +79,43 @@ client = OpenAI(
     base_url="https://openrouter.ai/api/v1"
 )
 
-MODEL_NAME = "openai/gpt-oss-20b"
+
+MODEL_NAME = "openai/gpt-4.1-mini"
+
 
 # ==========================================
 # AI FUNCTION
 # ==========================================
-
 def ask_ai(prompt):
-
     try:
-
         response = client.chat.completions.create(
-
             model=MODEL_NAME,
-
             messages=[
                 {
                     "role": "user",
                     "content": prompt
                 }
             ],
-
-            max_tokens=2000
+            temperature=0.7,
+            max_tokens=4000
         )
 
-        return response.choices[0].message.content
+        if not response:
+            return None
+
+        if not response.choices:
+            return None
+
+        content = response.choices[0].message.content
+
+        if not content:
+            return None
+
+        return content.strip()
 
     except Exception as e:
-
-        print("AI Error:", e)
-
-        return f"AI Error: {e}"
-# ==========================================
-# AI QUIZ GENERATOR
-# ==========================================
-
-def generate_quiz(topic):
-
-    prompt = f"""
-You are StudyBuddy AI, a quiz generator.
-
-Create 5 multiple-choice questions about:
-
-{topic}
-
-Return ONLY valid JSON.
-
-Use exactly this format:
-
-[
-    {{
-        "question": "Question text",
-        "options": [
-            "Option 1",
-            "Option 2",
-            "Option 3",
-            "Option 4"
-        ],
-        "answer": 0
-    }}
-]
-
-Rules:
-
-- Generate exactly 5 questions.
-- Each question must have exactly 4 options.
-- "answer" must be a number from 0 to 3.
-- 0 means first option is correct.
-- 1 means second option is correct.
-- 2 means third option is correct.
-- 3 means fourth option is correct.
-- Do not write A, B, C, D.
-- Return JSON only.
-"""
-
-    try:
-
-        result = ask_ai(prompt)
-
-        # Remove markdown code fences
-        result = result.replace("```json", "")
-        result = result.replace("```", "")
-
-        result = result.strip()
-
-        questions = json.loads(result)
-
-        return questions
-
-    except Exception as e:
-
-        print("Quiz Generation Error:", e)
-
-        return []
-
-
+        print("AI ERROR:", e)
+        return None
 # ==========================================
 # HOME PAGE
 # ==========================================
@@ -173,23 +129,18 @@ def home():
 # ==========================================
 # REGISTER
 # ==========================================
-
 @app.route("/register", methods=["GET", "POST"])
 def register():
 
     if request.method == "POST":
 
         fullname = request.form["fullname"]
-
         email = request.form["email"]
-
         password = request.form["password"]
-
 
         existing = User.query.filter_by(
             email=email
         ).first()
-
 
         if existing:
 
@@ -197,31 +148,20 @@ def register():
 
             return redirect("/register")
 
-
         new_user = User(
-
             fullname=fullname,
-
             email=email,
-
             password=password
-
         )
 
-
         db.session.add(new_user)
-
         db.session.commit()
-
 
         flash("Registration Successful!")
 
         return redirect("/login")
 
-
     return render_template("register.html")
-
-
 # ==========================================
 # LOGIN
 # ==========================================
@@ -232,32 +172,23 @@ def login():
     if request.method == "POST":
 
         email = request.form["email"]
-
         password = request.form["password"]
 
-
         user = User.query.filter_by(
-
             email=email,
-
             password=password
-
         ).first()
-
 
         if user:
 
             session["user_id"] = user.id
-
             session["user_name"] = user.fullname
 
             return redirect("/dashboard")
 
-
         flash("Invalid Email or Password")
 
         return redirect("/login")
-
 
     return render_template("login.html")
 
@@ -285,14 +216,12 @@ def dashboard():
 
         return redirect("/login")
 
-
     return render_template(
-
         "dashboard.html",
-
         username=session["user_name"]
-
     )
+
+
 # ==========================================
 # UPLOAD PDF
 # ==========================================
@@ -304,15 +233,11 @@ def upload():
 
         return redirect("/login")
 
-
     summary = ""
-
     message = ""
-
 
     if request.method == "POST":
 
-        # Check PDF
         if "pdf" not in request.files:
 
             message = "No PDF Selected."
@@ -323,11 +248,8 @@ def upload():
                 message=message
             )
 
-
         file = request.files["pdf"]
 
-
-        # Check filename
         if file.filename == "":
 
             message = "Choose a PDF."
@@ -338,76 +260,49 @@ def upload():
                 message=message
             )
 
-
-        # Secure filename
         filename = secure_filename(
             file.filename
         )
 
-
         filepath = os.path.join(
-
             app.config["UPLOAD_FOLDER"],
-
             filename
-
         )
-
-
-        file.save(filepath)
-
-
-        text = ""
-
 
         try:
 
-            # Open PDF
+            file.save(filepath)
+
+            text = ""
+
             pdf = fitz.open(filepath)
 
-
-            # Extract text
             for page in pdf:
 
                 text += page.get_text()
 
-
             pdf.close()
 
-
-            # Save PDF text
             session["pdf_text"] = text
 
-
-            # Save upload history
-            upload = Upload(
-
+            upload_record = Upload(
                 filename=filename,
-
                 user_id=session["user_id"]
-
             )
 
-
-            db.session.add(upload)
+            db.session.add(upload_record)
 
             db.session.commit()
-
 
         except Exception as e:
 
             message = f"PDF Error: {e}"
 
             return render_template(
-
                 "upload.html",
-
                 summary="",
-
                 message=message
-
             )
-
 
         # ==================================
         # AI SUMMARY
@@ -417,7 +312,7 @@ def upload():
 You are a study assistant.
 
 Read the following PDF text and generate
-a clean study summary.
+a clear study summary.
 
 Use simple English suitable for students.
 
@@ -426,21 +321,20 @@ PDF TEXT:
 {text[:3000]}
 """
 
-
         summary = ask_ai(prompt)
+
+        if not summary:
+
+            summary = "AI could not generate a summary."
 
         message = "PDF Uploaded Successfully."
 
-
     return render_template(
-
         "upload.html",
-
         summary=summary,
-
         message=message
-
     )
+
 
 # ==========================================
 # ASK AI CHATBOT
@@ -453,22 +347,18 @@ def chatbot():
 
         return redirect("/login")
 
-
     answer = ""
-
 
     if request.method == "POST":
 
         question = request.form.get(
-
             "question",
-
             ""
+        ).strip()
 
-        )
+        if question:
 
-
-        prompt = f"""
+            prompt = f"""
 You are StudyBuddy AI.
 
 Answer the student's question clearly
@@ -479,16 +369,18 @@ Question:
 {question}
 """
 
+            answer = ask_ai(prompt)
 
-        answer = ask_ai(prompt)
+            if not answer:
 
+                answer = (
+                    "AI could not generate an answer. "
+                    "Please try again."
+                )
 
     return render_template(
-
         "chatbot.html",
-
         answer=answer
-
     )
 
 
@@ -503,29 +395,20 @@ def summary():
 
         return redirect("/login")
 
-
     summary_text = ""
-
 
     if request.method == "POST":
 
         pdf_text = session.get(
-
             "pdf_text",
-
             ""
-
         )
-
 
         if not pdf_text:
 
             summary_text = (
-
                 "Please upload a PDF first."
-
             )
-
 
         else:
 
@@ -547,28 +430,23 @@ PDF:
 {pdf_text[:3000]}
 """
 
+            summary_text = ask_ai(prompt)
 
-            try:
-
-                summary_text = ask_ai(prompt)
-
-
-            except Exception as e:
+            if not summary_text:
 
                 summary_text = (
-                    f"AI Error: {e}"
+                    "AI could not generate the summary. "
+                    "Please try again."
                 )
 
-
     return render_template(
-
         "summary.html",
-
         summary=summary_text
-
     )
+
+
 # ==========================================
-# AI QUIZ GENERATOR
+# QUIZ GENERATOR
 # ==========================================
 
 def generate_quiz(topic):
@@ -577,13 +455,13 @@ def generate_quiz(topic):
 You are StudyBuddy AI, an expert quiz generator.
 
 Create exactly 10 multiple-choice questions
-about the following topic:
+about this topic:
 
 {topic}
 
 Return ONLY valid JSON.
 
-The JSON must follow exactly this structure:
+Use exactly this format:
 
 [
     {{
@@ -603,14 +481,14 @@ Rules:
 1. Generate exactly 10 questions.
 2. Every question must have exactly 4 options.
 3. Only ONE option must be correct.
-4. The answer value must be a number from 0 to 3.
-5. 0 means the first option is correct.
-6. 1 means the second option is correct.
-7. 2 means the third option is correct.
-8. 3 means the fourth option is correct.
-9. Do NOT write A, B, C, or D before options.
+4. The answer must be a number from 0 to 3.
+5. 0 = first option is correct.
+6. 1 = second option is correct.
+7. 2 = third option is correct.
+8. 3 = fourth option is correct.
+9. Do NOT write A, B, C or D in the option text.
 10. Do NOT include explanations.
-11. Do NOT include markdown.
+11. Do NOT use markdown.
 12. Return ONLY JSON.
 """
 
@@ -621,53 +499,119 @@ Rules:
         print("AI QUIZ RESPONSE:")
         print(result)
 
-        # Remove markdown if AI adds it
-        result = result.replace("```json", "")
-        result = result.replace("```", "")
+        # ==================================
+        # IMPORTANT: PREVENT NONE ERROR
+        # ==================================
+
+        if not result:
+
+            print("AI returned None.")
+
+            return []
 
         result = result.strip()
 
-        # Convert AI response to Python list
+        # Remove markdown if AI adds it
+
+        if result.startswith("```json"):
+
+            result = result[7:]
+
+        if result.startswith("```"):
+
+            result = result[3:]
+
+        if result.endswith("```"):
+
+            result = result[:-3]
+
+        result = result.strip()
+
+        # ==================================
+        # JSON CONVERSION
+        # ==================================
+
         questions = json.loads(result)
 
-        # Make sure at least 10 questions exist
         if not isinstance(questions, list):
-            print("Quiz response is not a list")
+
+            print("Quiz response is not a list.")
+
             return []
 
         if len(questions) < 10:
-            print("AI generated less than 10 questions")
+
+            print(
+                "AI generated less than 10 questions:",
+                len(questions)
+            )
+
             return []
 
-        # Keep only 10 questions
         questions = questions[:10]
 
-        # Validate questions
         valid_questions = []
+
+        # ==================================
+        # VALIDATE + RANDOMIZE OPTIONS
+        # ==================================
 
         for question in questions:
 
-            if "question" not in question:
+            if not isinstance(question, dict):
+
                 continue
 
-            if "options" not in question:
+            question_text = question.get(
+                "question"
+            )
+
+            options = question.get(
+                "options"
+            )
+
+            answer = question.get(
+                "answer"
+            )
+
+            if not question_text:
+
                 continue
 
-            if "answer" not in question:
+            if not isinstance(options, list):
+
                 continue
 
-            if len(question["options"]) != 4:
+            if len(options) != 4:
+
                 continue
 
             try:
-                answer = int(question["answer"])
+
+                answer = int(answer)
+
             except:
+
                 continue
 
             if answer < 0 or answer > 3:
+
                 continue
 
-            question["answer"] = answer
+            # Save correct answer text
+            correct_text = options[answer]
+
+            # Randomly shuffle options
+            random.shuffle(options)
+
+            # Find new correct position
+            new_answer = options.index(
+                correct_text
+            )
+
+            question["question"] = question_text
+            question["options"] = options
+            question["answer"] = new_answer
 
             valid_questions.append(question)
 
@@ -684,363 +628,190 @@ Rules:
 
     except Exception as e:
 
-        print("Quiz Generation Error:", e)
+        print(
+            "Quiz Generation Error:",
+            e
+        )
 
         return []
 
 
 # ==========================================
-# QUIZ GENERATOR ROUTE
+# QUIZ
 # ==========================================
 
 @app.route("/quiz", methods=["GET", "POST"])
 def quiz():
 
-    # Login check
     if "user_id" not in session:
 
         return redirect("/login")
 
-
-    # ======================================
-    # GENERATE QUIZ
-    # ======================================
+    # ==================================
+    # SUBMIT QUIZ
+    # ==================================
 
     if (
         request.method == "POST"
-        and "topic" in request.form
+        and request.form.get("submit_quiz") == "yes"
     ):
+
+        quiz_data = session.get(
+            "quiz_data",
+            []
+        )
+
+        if not quiz_data:
+
+            flash(
+                "Quiz expired. Please generate a new quiz."
+            )
+
+            return redirect("/quiz")
+
+        score = 0
+
+        for i, question in enumerate(
+            quiz_data
+        ):
+
+            selected = request.form.get(
+                f"question_{i}"
+            )
+
+            if selected is None:
+
+                continue
+
+            try:
+
+                selected = int(selected)
+
+            except:
+
+                continue
+
+            correct_answer = int(
+                question["answer"]
+            )
+
+            if selected == correct_answer:
+
+                score += 1
+
+        # Save score
+        session["quiz_score"] = score
+
+        session["quiz_submitted"] = True
+
+        # Save database score
+        try:
+
+            quiz_score = QuizScore(
+                user_id=session["user_id"],
+                score=score
+            )
+
+            db.session.add(quiz_score)
+
+            db.session.commit()
+
+        except Exception as e:
+
+            print(
+                "Quiz score save error:",
+                e
+            )
+
+            db.session.rollback()
+
+        return render_template(
+            "quiz.html",
+            questions=quiz_data,
+            score=score,
+            total=len(quiz_data)
+        )
+
+    # ==================================
+    # GENERATE QUIZ
+    # ==================================
+
+    if request.method == "POST":
 
         topic = request.form.get(
             "topic",
             ""
         ).strip()
 
-
-        # Check topic
         if not topic:
 
             flash(
-                "Please enter a topic."
+                "Please enter a quiz topic."
             )
 
             return redirect("/quiz")
 
+        print(
+            "Generating quiz for:",
+            topic
+        )
 
-        print("Generating quiz for:", topic)
-
-
-        # Generate 10 AI questions
         questions = generate_quiz(topic)
 
-
-        # Check generation
         if not questions:
 
             flash(
-                "Quiz generation failed. "
+                "Quiz could not be generated. "
                 "Please try again."
             )
 
             return redirect("/quiz")
 
+        # Save quiz
+        session["quiz_data"] = questions
 
-        # Save questions in session
-        session["quiz_questions"] = questions
+        session["quiz_submitted"] = False
 
-        session["quiz_topic"] = topic
+        session["quiz_score"] = 0
 
-
-        print(
-            "Questions generated:",
-            len(questions)
-        )
-
-
-        # Show questions
         return render_template(
-
             "quiz.html",
-
             questions=questions,
-
             score=None,
-
-            total=len(questions),
-
-            topic=topic
-
+            total=len(questions)
         )
 
+    # ==================================
+    # OPEN QUIZ PAGE
+    # ==================================
 
-    # ======================================
-    # SUBMIT QUIZ
-    # ======================================
-
-    if (
-        request.method == "POST"
-        and "submit_quiz" in request.form
-    ):
-
-        # Get questions
-        questions = session.get(
-            "quiz_questions",
-            []
-        )
-
-
-        # No questions
-        if not questions:
-
-            flash(
-                "No quiz found. "
-                "Please generate a quiz first."
-            )
-
-            return redirect("/quiz")
-
-
-        score = 0
-
-
-        # ==================================
-        # CHECK EACH ANSWER
-        # ==================================
-
-        for i, question in enumerate(questions):
-
-            selected = request.form.get(
-                f"question_{i}"
-            )
-
-
-            # If student selected an option
-            if selected is not None:
-
-                try:
-
-                    selected = int(selected)
-
-                    correct_answer = int(
-                        question["answer"]
-                    )
-
-
-                    if selected == correct_answer:
-
-                        score += 1
-
-
-                except Exception as e:
-
-                    print(
-                        "Answer checking error:",
-                        e
-                    )
-
-
-        total = len(questions)
-
-
-        # ==================================
-        # SAVE SCORE
-        # ==================================
-
-        try:
-
-            quiz_score = QuizScore(
-
-                user_id=session["user_id"],
-
-                score=score
-
-            )
-
-            db.session.add(quiz_score)
-
-            db.session.commit()
-
-            print(
-                "Quiz score saved:",
-                score,
-                "/",
-                total
-            )
-
-
-        except Exception as e:
-
-            print(
-                "Score Save Error:",
-                e
-            )
-
-            db.session.rollback()
-
-
-        # Save score in session
-        session["quiz_score"] = score
-
-        session["quiz_total"] = total
-
-
-        # ==================================
-        # SHOW SCORE
-        # ==================================
-
-        return render_template(
-
-            "quiz.html",
-
-            questions=questions,
-
-            score=score,
-
-            total=total,
-
-            topic=session.get(
-                "quiz_topic",
-                ""
-            )
-
-        )
-
-
-    # ======================================
-    # OPEN QUIZ GENERATOR
-    # ======================================
-
-    return render_template(
-
-        "quiz.html",
-
-        questions=[],
-
-        score=None,
-
-        total=0,
-
-        topic=""
-
+    questions = session.get(
+        "quiz_data",
+        []
     )
 
+    submitted = session.get(
+        "quiz_submitted",
+        False
+    )
 
-    # ======================================
-    # SUBMIT QUIZ
-    # ======================================
-
-    if (
-        request.method == "POST"
-        and "submit_quiz" in request.form
-    ):
-
-        questions = session.get(
-
-            "quiz_questions",
-
-            []
-
-        )
-
-
-        score = 0
-
-
-        # Check answers
-        for i, question in enumerate(questions):
-
-            selected = request.form.get(
-
-                f"question_{i}"
-
-            )
-
-
-            if selected is not None:
-
-                try:
-
-                    selected = int(selected)
-
-
-                    if selected == int(
-                        question["answer"]
-                    ):
-
-                        score += 1
-
-
-                except ValueError:
-
-                    pass
-
-
-        total = len(questions)
-
-
-        # ==================================
-        # SAVE SCORE TO DATABASE
-        # ==================================
-
-        try:
-
-            quiz_score = QuizScore(
-
-                user_id=session["user_id"],
-
-                score=score
-
-            )
-
-
-            db.session.add(quiz_score)
-
-            db.session.commit()
-
-
-        except Exception as e:
-
-            print(
-                "Score Save Error:",
-                e
-            )
-
-            db.session.rollback()
-
-
-        # Save score in session
-        session["quiz_score"] = score
-
-        session["quiz_total"] = total
-
+    if submitted and questions:
 
         return render_template(
-
             "quiz.html",
-
             questions=questions,
-
-            score=score,
-
-            total=total
-
+            score=session.get(
+                "quiz_score",
+                0
+            ),
+            total=len(questions)
         )
 
-
-    # ======================================
-    # OPEN QUIZ GENERATOR
-    # ======================================
-
     return render_template(
-
         "quiz.html",
-
         questions=[],
-
         score=None,
-
         total=0
-
     )
 
 
@@ -1055,23 +826,18 @@ def history():
 
         return redirect("/login")
 
-
     uploads = Upload.query.filter_by(
-
         user_id=session["user_id"]
-
     ).all()
 
-
     return render_template(
-
         "history.html",
-
         uploads=uploads
-
     )
+
+
 # ==========================================
-# FLASHCARDS GENERATOR
+# FLASHCARDS
 # ==========================================
 
 @app.route("/flashcards", methods=["GET", "POST"])
@@ -1081,9 +847,7 @@ def flashcards():
 
         return redirect("/login")
 
-
-    flashcards = []
-
+    flashcards_data = []
 
     if request.method == "POST":
 
@@ -1091,7 +855,6 @@ def flashcards():
             "topic",
             ""
         ).strip()
-
 
         if not topic:
 
@@ -1101,12 +864,12 @@ def flashcards():
 
             return redirect("/flashcards")
 
-
         prompt = f"""
 Write 10 informative paragraphs
 about the topic below.
 
 Topic:
+
 {topic}
 
 Instructions:
@@ -1120,38 +883,26 @@ Instructions:
 - Do not use questions and answers.
 """
 
+        text = ask_ai(prompt)
 
-        try:
+        if text:
 
-            text = ask_ai(prompt)
-
-
-            flashcards = [
-
+            flashcards_data = [
                 paragraph.strip()
-
                 for paragraph in text.split("\n\n")
-
                 if paragraph.strip()
-
             ]
 
+        else:
 
-        except Exception as e:
-
-            flashcards = [
-
-                f"AI Error: {e}"
-
+            flashcards_data = [
+                "AI could not generate flashcards. "
+                "Please try again."
             ]
-
 
     return render_template(
-
         "flashcards.html",
-
-        flashcards=flashcards
-
+        flashcards=flashcards_data
     )
 
 
@@ -1162,12 +913,7 @@ Instructions:
 if __name__ == "__main__":
 
     app.run(
-
         debug=True,
-
         host="0.0.0.0",
-
         port=5000
-
-    ) 
-    
+    )
