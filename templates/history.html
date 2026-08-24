@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Upload History - StudyBuddy AI</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+        .history-card {
+            background: white;
+            width: 70%;
+            margin: 20px auto;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px #ccc;
+        }
+
+        .history-card h3 {
+            color: #0d6efd;
+        }
+
+        .history-link {
+            display: inline-block;
+            background: #0d6efd;
+            color: white;
+            padding: 12px 25px;
+            border-radius: 8px;
+            text-decoration: none;
+            margin: 10px;
+        }
+
+        .history-link:hover {
+            background: #084298;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>📂 Upload History</h1>
+
+        {% if uploads %}
+
+            {% for upload in uploads %}
+
+                <div class="history-card">
+
+                    <h3>
+                        📄 {{ upload.filename }}
+                    </h3>
+
+                    <p>
+                        Your uploaded PDF
+                    </p>
+
+                </div>
+
+            {% endfor %}
+
+        {% else %}
+
+            <div class="history-card">
+
+                <h3>No Upload History</h3>
+
+                <p>
+                    You have not uploaded any PDF yet.
+                </p>
+
+            </div>
+
+        {% endif %}
+
+        <br>
+
+        <a class="history-link" href="/upload">
+            📄 Upload New PDF
+        </a>
+
+        <a class="history-link" href="/dashboard">
+            ← Back to Dashboard
+        </a>
+
+    </div>
+
+</body>
+
+</html>

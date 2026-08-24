@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Ask AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body>
+
+    <h1>🤖 Ask AI</h1>
+
+    <form method="POST">
+
+        <textarea
+            name="question"
+            rows="5"
+            cols="70"
+            placeholder="Ask any question about your uploaded PDF..."
+            required></textarea>
+
+        <br><br>
+
+        <button type="submit">
+            Ask AI
+        </button>
+
+    </form>
+
+    <br>
+
+    {% if answer %}
+        <h2>Answer</h2>
+
+        <textarea rows="15" cols="80" readonly>{{ answer }}</textarea>
+    {% endif %}
+
+    <br><br>
+
+    <a href="/dashboard">⬅ Back to Dashboard</a>
+
+</body>
+
+</html>

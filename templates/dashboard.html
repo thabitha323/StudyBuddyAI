@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>StudyBuddy AI Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <h1>🎓 StudyBuddy AI Dashboard</h1>
+
+    <h3>Welcome, {{ username }}</h3>
+
+    <br>
+
+    <a href="/upload">
+        <button>📄 Upload PDF</button>
+    </a>
+
+    <br><br>
+
+    <a href="/chatbot">
+        <button>🤖 Ask AI</button>
+    </a>
+
+    <br><br>
+
+    <a href="/quiz">
+        <button>📝 Quiz Generator</button>
+    </a>
+
+    <br><br>
+
+    <a href="/flashcards">
+        <button>🃏 Flashcards</button>
+    </a>
+
+    <br><br>
+    <a href="/summary">
+        <button>📝 AI Summary</button>
+    </a>
+     <br><br>
+    <a href="/history">
+    <button>📂 Upload History</button>
+    </a>
+
+    <a href="/logout">
+        <button>🚪 Logout</button>
+    </a>
+
+</body>
+</html>
