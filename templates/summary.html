@@ -1,24 +1,35 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>AI Summary</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <title>AI Summary - StudyBuddy AI</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
 </head>
+
 <body>
 
-<h2>📝 AI PDF Summary</h2>
+    <h2>📝 AI PDF Summary</h2>
 
-<form method="POST">
-    <button type="submit">Generate Summary</button>
-</form>
+    <form method="POST">
+        <button type="submit">Generate Summary</button>
+    </form>
 
-{% if summary %}
-<hr>
-<h3>Summary</h3>
-<p>{{ summary }}</p>
-{% endif %}
 
-<a href="/dashboard">⬅ Back to Dashboard</a>
+    {% if summary %}
+
+    <div class="generative-summary">
+
+        <h2>Generative Summary</h2>
+
+        <p>{{ summary }}</p>
+
+    </div>
+
+    {% endif %}
+
+
+    <a href="/dashboard">⬅ Back to Dashboard</a>
 
 </body>
 </html>

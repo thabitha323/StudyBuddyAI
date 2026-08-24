@@ -55,6 +55,10 @@
             cursor: pointer;
         }
 
+        .quiz-option input[type="radio"]:checked + strong {
+            color: #0d6efd;
+        }
+
         .submit-button {
             margin: 30px auto;
             display: block;
@@ -79,11 +83,12 @@
         }
 
         .correct-answer {
-            background: #f4f6f9;
+            background: white;
             padding: 20px;
             margin: 20px 0;
             border-radius: 10px;
             text-align: left;
+            box-shadow: 0 3px 10px #ccc;
         }
 
         .dashboard-button {
@@ -122,11 +127,9 @@
         <form method="POST">
 
             <label for="topic">
-
                 <strong>
                     Enter Quiz Topic
                 </strong>
-
             </label>
 
             <br><br>
@@ -154,59 +157,51 @@
 
     {% else %}
 
-
         {% if score is none %}
-
 
             <form method="POST">
 
-
                 {% for q in questions %}
 
+                    <!-- IMPORTANT:
+                         Store the OUTER question number -->
+                    {% set question_number = loop.index0 %}
 
                     <div class="quiz-question">
 
                         <h3>
-
                             Q{{ loop.index }}.
                             {{ q.question }}
-
                         </h3>
 
 
                         {% for option in q.options %}
 
-
                             <label class="quiz-option">
 
                                 <input
                                     type="radio"
-                                    name="question_{{ loop.index0 }}"
+                                    name="question_{{ question_number }}"
                                     value="{{ loop.index0 }}"
                                     required
                                 >
 
                                 <strong>
-
-                                    {{ ['A', 'B', 'C', 'D'][loop.index0] }})
-
+                                    {{ ['A', 'B', 'C', 'D'][loop.index0] }}
                                 </strong>
 
                                 {{ option }}
 
                             </label>
 
-
                         {% endfor %}
 
-
                     </div>
-
 
                 {% endfor %}
 
 
-                <!-- IMPORTANT -->
+                <!-- Tell Flask this is quiz submission -->
 
                 <input
                     type="hidden"
@@ -219,11 +214,8 @@
                     type="submit"
                     class="submit-button"
                 >
-
                     ✅ Submit Quiz
-
                 </button>
-
 
             </form>
 
@@ -234,7 +226,6 @@
 
         {% else %}
 
-
             <div class="result-box">
 
                 <h2>
@@ -242,10 +233,8 @@
                 </h2>
 
                 <p class="score">
-
                     Your Score:
                     {{ score }} / {{ total }}
-
                 </p>
 
 
@@ -289,16 +278,12 @@
 
             {% for q in questions %}
 
-
                 <div class="correct-answer">
 
                     <h3>
-
                         Q{{ loop.index }}.
                         {{ q.question }}
-
                     </h3>
-
 
                     <p>
 
@@ -306,15 +291,13 @@
                             Correct Answer:
                         </strong>
 
-                        {{ ['A', 'B', 'C', 'D'][q.answer] }})
+                        {{ ['A', 'B', 'C', 'D'][q.answer] }}
 
                         {{ q.options[q.answer] }}
 
                     </p>
 
-
                 </div>
-
 
             {% endfor %}
 
@@ -326,9 +309,7 @@
                 href="/quiz"
                 class="dashboard-button"
             >
-
                 📝 Take Another Quiz
-
             </a>
 
 
@@ -336,14 +317,11 @@
                 href="/history"
                 class="dashboard-button"
             >
-
                 📂 View History
-
             </a>
 
 
         {% endif %}
-
 
     {% endif %}
 
@@ -354,14 +332,11 @@
 
     <br>
 
-
     <a
         href="/dashboard"
         class="dashboard-button"
     >
-
         ← Back to Dashboard
-
     </a>
 
 
