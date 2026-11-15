@@ -1,58 +1,30 @@
-from flask import (
-    Flask,
-    render_template,
-    request,
-    redirect,
-    session,
-    flash
-)
-
+from flask import Flask, render_template, request, redirect, session, flash
 from models import db, User, Upload, QuizScore
 from werkzeug.utils import secure_filename
-from openai import OpenAI
+from google import genai
 from dotenv import load_dotenv
 
-import fitz
 import os
+import fitz
 import json
 import random
 
+# Load environment variables
+load_dotenv(override=True)
 
-# ==========================================
-# LOAD ENVIRONMENT
-# ==========================================
-
-load_dotenv()
-
-
-# ==========================================
-# FLASK CONFIGURATION
-# ==========================================
-
+# Flask setup
 app = Flask(__name__)
-
 app.secret_key = "studybuddy_secret_key"
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///studybuddy.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
-
-# ==========================================
-# UPLOAD FOLDER
-# ==========================================
-
+# PDF folder
 UPLOAD_FOLDER = "pdf_files"
-
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-if not os.path.exists(UPLOAD_FOLDER):
-    os.makedirs(UPLOAD_FOLDER)
-
-
-# ==========================================
-# DATABASE
-# ==========================================
-
+# Database setup
 db.init_app(app)
 
 with app.app_context():
@@ -60,115 +32,79 @@ with app.app_context():
 
 
 # ==========================================
-# OPENROUTER CONFIGURATION
+# GEMINI AI CONFIGURATION
 # ==========================================
 
-api_key = os.getenv("OPENROUTER_API_KEY")
+api_key = os.getenv("GEMINI_API_KEY")
 
 if not api_key:
-    raise ValueError(
-        "OPENROUTER_API_KEY not found. "
-        "Please check your .env file."
-    )
+    raise ValueError("GEMINI_API_KEY not found in .env file")
 
-print("API key Loaded:", bool(api_key))
+client = genai.Client(api_key=api_key)
 
-
-client = OpenAI(
-    api_key=api_key,
-    base_url="https://openrouter.ai/api/v1"
-)
-
-
-MODEL_NAME = "openai/gpt-4.1-mini"
+MODEL_NAME = "gemini-3.8-flash"
 
 
 # ==========================================
-# AI FUNCTION
+# COMMON AI FUNCTION
 # ==========================================
+
 def ask_ai(prompt):
     try:
-        response = client.chat.completions.create(
+        response = client.models.generate_content(
             model=MODEL_NAME,
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            temperature=0.7,
-            max_tokens=4000
+            contents=prompt
         )
 
-        if not response:
+        if not response or not response.text:
             return None
 
-        if not response.choices:
-            return None
-
-        content = response.choices[0].message.content
-
-        if not content:
-            return None
-
-        return content.strip()
+        return response.text.strip()
 
     except Exception as e:
-        print("AI ERROR:", e)
+        print("Gemini Error:", e)
         return None
+
+
 # ==========================================
 # HOME PAGE
 # ==========================================
 
 @app.route("/")
 def home():
-
     return render_template("index.html")
 
-
-# ==========================================
-# REGISTER
-# ==========================================
 @app.route("/register", methods=["GET", "POST"])
 def register():
-
     if request.method == "POST":
 
         fullname = request.form["fullname"]
         email = request.form["email"]
         password = request.form["password"]
 
-        existing = User.query.filter_by(
-            email=email
-        ).first()
+        existing = User.query.filter_by(email=email).first()
 
         if existing:
-
-            flash("Email already exists.")
-
+            flash("Email already exists")
             return redirect("/register")
 
-        new_user = User(
+        user = User(
             fullname=fullname,
             email=email,
             password=password
         )
 
-        db.session.add(new_user)
+        db.session.add(user)
         db.session.commit()
 
-        flash("Registration Successful!")
-
+        flash("Registration Successful")
         return redirect("/login")
 
     return render_template("register.html")
-# ==========================================
-# LOGIN
-# ==========================================
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-
     if request.method == "POST":
 
         email = request.form["email"]
@@ -180,40 +116,24 @@ def login():
         ).first()
 
         if user:
-
             session["user_id"] = user.id
             session["user_name"] = user.fullname
-
             return redirect("/dashboard")
 
         flash("Invalid Email or Password")
 
-        return redirect("/login")
-
     return render_template("login.html")
 
 
-# ==========================================
-# LOGOUT
-# ==========================================
-
 @app.route("/logout")
 def logout():
-
     session.clear()
-
     return redirect("/")
 
 
-# ==========================================
-# DASHBOARD
-# ==========================================
-
 @app.route("/dashboard")
 def dashboard():
-
     if "user_id" not in session:
-
         return redirect("/login")
 
     return render_template(
@@ -221,16 +141,9 @@ def dashboard():
         username=session["user_name"]
     )
 
-
-# ==========================================
-# UPLOAD PDF
-# ==========================================
-
 @app.route("/upload", methods=["GET", "POST"])
 def upload():
-
     if "user_id" not in session:
-
         return redirect("/login")
 
     summary = ""
@@ -238,96 +151,52 @@ def upload():
 
     if request.method == "POST":
 
-        if "pdf" not in request.files:
+        file = request.files.get("pdf")
 
-            message = "No PDF Selected."
+        if not file or file.filename == "":
+            message = "Please select a PDF."
 
-            return render_template(
-                "upload.html",
-                summary=summary,
-                message=message
-            )
+        else:
+            filename = secure_filename(file.filename)
+            filepath = os.path.join(UPLOAD_FOLDER, filename)
 
-        file = request.files["pdf"]
+            try:
+                file.save(filepath)
 
-        if file.filename == "":
+                pdf = fitz.open(filepath)
+                pdf_text = ""
 
-            message = "Choose a PDF."
+                for page in pdf:
+                    pdf_text += page.get_text()
 
-            return render_template(
-                "upload.html",
-                summary=summary,
-                message=message
-            )
+                pdf.close()
 
-        filename = secure_filename(
-            file.filename
-        )
+                session["pdf_text"] = pdf_text
 
-        filepath = os.path.join(
-            app.config["UPLOAD_FOLDER"],
-            filename
-        )
+                record = Upload(
+                    filename=filename,
+                    user_id=session["user_id"]
+                )
 
-        try:
+                db.session.add(record)
+                db.session.commit()
 
-            file.save(filepath)
+                prompt = f"""
+                Summarize this PDF in simple English.
+                Explain the important concepts.
 
-            text = ""
+                PDF Content:
+                {pdf_text[:3000]}
+                """
 
-            pdf = fitz.open(filepath)
+                summary = ask_ai(prompt)
+                message = "PDF Uploaded Successfully"
 
-            for page in pdf:
+                if not summary:
+                    summary = "AI could not generate summary."
 
-                text += page.get_text()
-
-            pdf.close()
-
-            session["pdf_text"] = text
-
-            upload_record = Upload(
-                filename=filename,
-                user_id=session["user_id"]
-            )
-
-            db.session.add(upload_record)
-
-            db.session.commit()
-
-        except Exception as e:
-
-            message = f"PDF Error: {e}"
-
-            return render_template(
-                "upload.html",
-                summary="",
-                message=message
-            )
-
-        # ==================================
-        # AI SUMMARY
-        # ==================================
-
-        prompt = f"""
-You are a study assistant.
-
-Read the following PDF text and generate
-a clear study summary.
-
-Use simple English suitable for students.
-
-PDF TEXT:
-
-{text[:3000]}
-"""
-
-        summary = ask_ai(prompt)
-
-        if not summary:
-
-            summary = "AI could not generate a summary."
-
-        message = "PDF Uploaded Successfully."
+            except Exception as e:
+                message = f"PDF Error: {e}"
 
     return render_template(
         "upload.html",
@@ -336,108 +205,21 @@ PDF TEXT:
     )
 
 
-# ==========================================
-# ASK AI CHATBOT
-# ==========================================
-
-@app.route("/chatbot", methods=["GET", "POST"])
-def chatbot():
-
-    if "user_id" not in session:
-
-        return redirect("/login")
-
-    answer = ""
-
-    if request.method == "POST":
-
-        question = request.form.get(
-            "question",
-            ""
-        ).strip()
-
-        if question:
-
-            prompt = f"""
-You are StudyBuddy AI.
-
-Answer the student's question clearly
-and simply.
-
-Question:
-
-{question}
-"""
-
-            answer = ask_ai(prompt)
-
-            if not answer:
-
-                answer = (
-                    "AI could not generate an answer. "
-                    "Please try again."
-                )
-
-    return render_template(
-        "chatbot.html",
-        answer=answer
-    )
-
-
-# ==========================================
-# SUMMARY
-# ==========================================
-
 @app.route("/summary", methods=["GET", "POST"])
 def summary():
-
     if "user_id" not in session:
-
         return redirect("/login")
 
     summary_text = ""
 
     if request.method == "POST":
+        pdf_text = session.get("pdf_text", "")
 
-        pdf_text = session.get(
-            "pdf_text",
-            ""
-        )
-
-        if not pdf_text:
-
-            summary_text = (
-                "Please upload a PDF first."
-            )
-
-        else:
-
-            prompt = f"""
-Read the following PDF content and
-generate a clear summary in paragraph form.
-
-Instructions:
-
-- Write 3 to 5 paragraphs.
-- Each paragraph should contain
-  4 to 6 sentences.
-- Use simple and easy English.
-- Explain important concepts
-  instead of listing bullet points.
-
-PDF:
-
-{pdf_text[:3000]}
-"""
-
+        if pdf_text:
+            prompt = f"Generate a simple study summary:\n{pdf_text[:3000]}"
             summary_text = ask_ai(prompt)
-
-            if not summary_text:
-
-                summary_text = (
-                    "AI could not generate the summary. "
-                    "Please try again."
-                )
+        else:
+            summary_text = "Please upload a PDF first."
 
     return render_template(
         "summary.html",
@@ -445,367 +227,124 @@ PDF:
     )
 
 
-# ==========================================
-# QUIZ GENERATOR
-# ==========================================
+@app.route("/chatbot", methods=["GET", "POST"])
+def chatbot():
+    if "user_id" not in session:
+        return redirect("/login")
+
+    answer = ""
+
+    if request.method == "POST":
+        question = request.form.get("question", "").strip()
+
+        if question:
+            prompt = f"Answer this student question simply: {question}"
+            answer = ask_ai(prompt)
+
+            if not answer:
+                answer = "AI could not generate an answer."
+
+    return render_template(
+        "chatbot.html",
+        answer=answer
+    )
 
 def generate_quiz(topic):
 
     prompt = f"""
-You are StudyBuddy AI, an expert quiz generator.
+    Create exactly 10 multiple-choice questions about {topic}.
 
-Create exactly 10 multiple-choice questions
-about this topic:
-
-{topic}
-
-Return ONLY valid JSON.
-
-Use exactly this format:
-
-[
-    {{
-        "question": "Question text",
-        "options": [
-            "Option 1",
-            "Option 2",
-            "Option 3",
-            "Option 4"
-        ],
-        "answer": 0
-    }}
-]
-
-Rules:
-
-1. Generate exactly 10 questions.
-2. Every question must have exactly 4 options.
-3. Only ONE option must be correct.
-4. The answer must be a number from 0 to 3.
-5. 0 = first option is correct.
-6. 1 = second option is correct.
-7. 2 = third option is correct.
-8. 3 = fourth option is correct.
-9. Do NOT write A, B, C or D in the option text.
-10. Do NOT include explanations.
-11. Do NOT use markdown.
-12. Return ONLY JSON.
-"""
+    Return only JSON in this format:
+    [
+        {{
+            "question": "Question?",
+            "options": ["One", "Two", "Three", "Four"],
+            "answer": 0
+        }}
+    ]
+    """
 
     try:
-
         result = ask_ai(prompt)
 
-        print("AI QUIZ RESPONSE:")
-        print(result)
-
-        # ==================================
-        # IMPORTANT: PREVENT NONE ERROR
-        # ==================================
-
         if not result:
-
-            print("AI returned None.")
-
             return []
 
-        result = result.strip()
-
-        # Remove markdown if AI adds it
-
-        if result.startswith("```json"):
-
-            result = result[7:]
-
-        if result.startswith("```"):
-
-            result = result[3:]
-
-        if result.endswith("```"):
-
-            result = result[:-3]
-
-        result = result.strip()
-
-        # ==================================
-        # JSON CONVERSION
-        # ==================================
-
+        result = result.replace("```json", "").replace("```", "").strip()
         questions = json.loads(result)
-
-        if not isinstance(questions, list):
-
-            print("Quiz response is not a list.")
-
-            return []
-
-        if len(questions) < 10:
-
-            print(
-                "AI generated less than 10 questions:",
-                len(questions)
-            )
-
-            return []
-
-        questions = questions[:10]
 
         valid_questions = []
 
-        # ==================================
-        # VALIDATE + RANDOMIZE OPTIONS
-        # ==================================
+        for q in questions[:10]:
+            options = q["options"]
+            answer = int(q["answer"])
 
-        for question in questions:
-
-            if not isinstance(question, dict):
-
+            if len(options) != 4 or answer not in range(4):
                 continue
 
-            question_text = question.get(
-                "question"
-            )
-
-            options = question.get(
-                "options"
-            )
-
-            answer = question.get(
-                "answer"
-            )
-
-            if not question_text:
-
-                continue
-
-            if not isinstance(options, list):
-
-                continue
-
-            if len(options) != 4:
-
-                continue
-
-            try:
-
-                answer = int(answer)
-
-            except:
-
-                continue
-
-            if answer < 0 or answer > 3:
-
-                continue
-
-            # Save correct answer text
-            correct_text = options[answer]
-
-            # Randomly shuffle options
+            correct = options[answer]
             random.shuffle(options)
 
-            # Find new correct position
-            new_answer = options.index(
-                correct_text
-            )
+            q["answer"] = options.index(correct)
+            valid_questions.append(q)
 
-            question["question"] = question_text
-            question["options"] = options
-            question["answer"] = new_answer
-
-            valid_questions.append(question)
-
-        if len(valid_questions) < 10:
-
-            print(
-                "Not enough valid questions:",
-                len(valid_questions)
-            )
-
-            return []
-
-        return valid_questions[:10]
+        return valid_questions if len(valid_questions) == 10 else []
 
     except Exception as e:
-
-        print(
-            "Quiz Generation Error:",
-            e
-        )
-
+        print("Quiz Error:", e)
         return []
 
 
-# ==========================================
-# QUIZ
-# ==========================================
-
 @app.route("/quiz", methods=["GET", "POST"])
 def quiz():
-
     if "user_id" not in session:
-
         return redirect("/login")
 
-    # ==================================
-    # SUBMIT QUIZ
-    # ==================================
+    if request.method == "POST":
 
-    if (
-        request.method == "POST"
-        and request.form.get("submit_quiz") == "yes"
-    ):
+        if request.form.get("submit_quiz") == "yes":
 
-        quiz_data = session.get(
-            "quiz_data",
-            []
-        )
+            questions = session.get("quiz_data", [])
+            score = 0
 
-        if not quiz_data:
+            for i, q in enumerate(questions):
+                selected = request.form.get(f"question_{i}")
 
-            flash(
-                "Quiz expired. Please generate a new quiz."
-            )
+                if selected is not None:
+                    if int(selected) == q["answer"]:
+                        score += 1
 
-            return redirect("/quiz")
-
-        score = 0
-
-        for i, question in enumerate(
-            quiz_data
-        ):
-
-            selected = request.form.get(
-                f"question_{i}"
-            )
-
-            if selected is None:
-
-                continue
-
-            try:
-
-                selected = int(selected)
-
-            except:
-
-                continue
-
-            correct_answer = int(
-                question["answer"]
-            )
-
-            if selected == correct_answer:
-
-                score += 1
-
-        # Save score
-        session["quiz_score"] = score
-
-        session["quiz_submitted"] = True
-
-        # Save database score
-        try:
-
-            quiz_score = QuizScore(
+            result = QuizScore(
                 user_id=session["user_id"],
                 score=score
             )
 
-            db.session.add(quiz_score)
-
+            db.session.add(result)
             db.session.commit()
 
-        except Exception as e:
-
-            print(
-                "Quiz score save error:",
-                e
+            return render_template(
+                "quiz.html",
+                questions=questions,
+                score=score,
+                total=len(questions)
             )
 
-            db.session.rollback()
+        topic = request.form.get("topic", "").strip()
 
-        return render_template(
-            "quiz.html",
-            questions=quiz_data,
-            score=score,
-            total=len(quiz_data)
-        )
+        if topic:
+            questions = generate_quiz(topic)
 
-    # ==================================
-    # GENERATE QUIZ
-    # ==================================
+            if questions:
+                session["quiz_data"] = questions
 
-    if request.method == "POST":
+                return render_template(
+                    "quiz.html",
+                    questions=questions,
+                    score=None,
+                    total=len(questions)
+                )
 
-        topic = request.form.get(
-            "topic",
-            ""
-        ).strip()
-
-        if not topic:
-
-            flash(
-                "Please enter a quiz topic."
-            )
-
-            return redirect("/quiz")
-
-        print(
-            "Generating quiz for:",
-            topic
-        )
-
-        questions = generate_quiz(topic)
-
-        if not questions:
-
-            flash(
-                "Quiz could not be generated. "
-                "Please try again."
-            )
-
-            return redirect("/quiz")
-
-        # Save quiz
-        session["quiz_data"] = questions
-
-        session["quiz_submitted"] = False
-
-        session["quiz_score"] = 0
-
-        return render_template(
-            "quiz.html",
-            questions=questions,
-            score=None,
-            total=len(questions)
-        )
-
-    # ==================================
-    # OPEN QUIZ PAGE
-    # ==================================
-
-    questions = session.get(
-        "quiz_data",
-        []
-    )
-
-    submitted = session.get(
-        "quiz_submitted",
-        False
-    )
-
-    if submitted and questions:
-
-        return render_template(
-            "quiz.html",
-            questions=questions,
-            score=session.get(
-                "quiz_score",
-                0
-            ),
-            total=len(questions)
-        )
+        flash("Quiz could not be generated.")
 
     return render_template(
         "quiz.html",
@@ -815,15 +354,9 @@ def quiz():
     )
 
 
-# ==========================================
-# UPLOAD HISTORY
-# ==========================================
-
-@app.route("/history", methods=["GET"])
+@app.route("/history")
 def history():
-
     if "user_id" not in session:
-
         return redirect("/login")
 
     uploads = Upload.query.filter_by(
@@ -836,85 +369,32 @@ def history():
     )
 
 
-# ==========================================
-# FLASHCARDS
-# ==========================================
-
 @app.route("/flashcards", methods=["GET", "POST"])
 def flashcards():
-
     if "user_id" not in session:
-
         return redirect("/login")
 
-    flashcards_data = []
+    cards = []
 
     if request.method == "POST":
+        topic = request.form.get("topic", "").strip()
 
-        topic = request.form.get(
-            "topic",
-            ""
-        ).strip()
+        if topic:
+            prompt = f"Explain {topic} in 10 simple study paragraphs."
+            result = ask_ai(prompt)
 
-        if not topic:
-
-            flash(
-                "Please enter a topic."
-            )
-
-            return redirect("/flashcards")
-
-        prompt = f"""
-Write 10 informative paragraphs
-about the topic below.
-
-Topic:
-
-{topic}
-
-Instructions:
-
-- Each paragraph should explain
-  one important concept.
-- Each paragraph should contain
-  4 to 6 simple sentences.
-- Use easy English suitable for students.
-- Number the paragraphs from 1 to 10.
-- Do not use questions and answers.
-"""
-
-        text = ask_ai(prompt)
-
-        if text:
-
-            flashcards_data = [
-                paragraph.strip()
-                for paragraph in text.split("\n\n")
-                if paragraph.strip()
-            ]
-
-        else:
-
-            flashcards_data = [
-                "AI could not generate flashcards. "
-                "Please try again."
-            ]
+            if result:
+                cards = [
+                    p.strip()
+                    for p in result.split("\n\n")
+                    if p.strip()
+                ]
 
     return render_template(
         "flashcards.html",
-        flashcards=flashcards_data
+        flashcards=cards
     )
 
 
-# ==========================================
-# RUN FLASK APP
-# ==========================================
 if __name__ == "__main__":
-    import os
-
-    port = int(os.environ.get("PORT", 5000))
-
-    app.run(
-        host="0.0.0.0",
-        port=port
-    )
+    app.run(debug=True)
