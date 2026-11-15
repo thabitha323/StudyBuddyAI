@@ -117,29 +117,23 @@ def register():
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-
     if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
 
-        email = request.form["email"]
-        password = request.form["password"]
+        user = User.query.filter_by(email=email).first()
 
-        user = User.query.filter_by(
-            email=email,
-            password=password
-        ).first()
-
-        if user:
+        if user and user.password == password:
             session["user_id"] = user.id
             session["user_name"] = user.fullname
-
+            print("LOGIN SUCCESS")
             return redirect("/dashboard")
 
-        flash("Invalid Email or Password.")
-        return redirect("/login")
+        print("LOGIN FAILED - USER OR PASSWORD NOT MATCHED")
+        flash("Invalid Email or Password")
+        return render_template("login.html")
 
     return render_template("login.html")
-
-
 # ==========================================
 # LOGOUT
 # ==========================================
