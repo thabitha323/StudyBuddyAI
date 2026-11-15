@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -11,23 +12,20 @@
 
     <h2>📝 AI PDF Summary</h2>
 
-    <form method="POST">
+    {% if not summary %}
+    <p>Click below to generate your PDF summary using Gemini AI.</p>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('summary') }}">
         <button type="submit">Generate Summary</button>
     </form>
 
-
     {% if summary %}
-
     <div class="generative-summary">
-
         <h2>Generative Summary</h2>
-
         <p>{{ summary }}</p>
-
     </div>
-
     {% endif %}
-
 
     <a href="/dashboard">⬅ Back to Dashboard</a>
 
