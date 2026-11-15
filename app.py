@@ -188,8 +188,7 @@ def upload():
                 file.save(filepath)
 
                 with pymupdf.open(filepath) as pdf:
-                    pdf_text = "
-".join(page.get_text() for page in pdf)
+                    pdf_text = "\n".join(page.get_text() for page in pdf)
 
                 if not pdf_text.strip():
                     message = "No readable text found in this PDF."
