@@ -171,39 +171,28 @@ def upload():
     if "user_id" not in session:
         return redirect("/login")
 
-    summary = ""
     message = ""
 
     if request.method == "POST":
-
         file = request.files.get("pdf")
 
         if not file or file.filename == "":
             message = "Please select a PDF."
-
         elif not file.filename.lower().endswith(".pdf"):
             message = "Please upload a PDF file."
-
         else:
             filename = secure_filename(file.filename)
-
-            filepath = os.path.join(
-                UPLOAD_FOLDER,
-                filename
-            )
+            filepath = os.path.join(UPLOAD_FOLDER, filename)
 
             try:
                 file.save(filepath)
 
                 with pymupdf.open(filepath) as pdf:
-                    pdf_text = "\n".join(
-                        page.get_text()
-                        for page in pdf
-                    )
+                    pdf_text = "
+".join(page.get_text() for page in pdf)
 
                 if not pdf_text.strip():
                     message = "No readable text found in this PDF."
-
                 else:
                     session["pdf_text"] = pdf_text[:2500]
 
@@ -211,28 +200,10 @@ def upload():
                         filename=filename,
                         user_id=session["user_id"]
                     )
-
                     db.session.add(record)
                     db.session.commit()
 
-                    prompt = f"""
-                    You are StudyBuddy AI.
-
-                    Summarize this PDF in simple English.
-                    Explain the important concepts clearly.
-                    Use student-friendly language.
-
-                    PDF CONTENT:
-                    {pdf_text[:3000]}
-                    """
-
-                    summary = ask_ai(prompt)
-
-                    if summary:
-                        message = "PDF Uploaded Successfully!"
-                    else:
-                        summary = "AI could not generate the summary."
-                        message = "PDF uploaded, but AI summary failed."
+                    message = "PDF Uploaded Successfully! Go to AI Summary."
 
             except Exception as e:
                 db.session.rollback()
@@ -241,12 +212,11 @@ def upload():
 
     return render_template(
         "upload.html",
-        summary=summary,
+        summary="",
         message=message
     )
 
 
-# ==========================================
 # SUMMARY PAGE
 # ==========================================
 
