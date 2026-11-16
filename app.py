@@ -5,9 +5,10 @@ from google import genai
 from dotenv import load_dotenv
 
 import os
-import fitz
+import pymupdf
 import json
 import random
+import time
 
 # Load environment variables
 load_dotenv(override=True)
@@ -30,41 +31,57 @@ db.init_app(app)
 with app.app_context():
     db.create_all()
 
-
-# ==========================================
-# GEMINI AI CONFIGURATION
-# ==========================================
-
 api_key = os.getenv("GEMINI_API_KEY")
-
-if not api_key:
-    raise ValueError("GEMINI_API_KEY not found in .env file")
-
 client = genai.Client(api_key=api_key)
 
-MODEL_NAME = "gemini-3.8-flash"
+MODEL_NAME = "gemini-3.5-flash-lite"
+print("Gemini Model:", MODEL_NAME)
 
-
-# ==========================================
-# COMMON AI FUNCTION
-# ==========================================
 
 def ask_ai(prompt):
-    try:
-        response = client.models.generate_content(
-            model=MODEL_NAME,
-            contents=prompt
-        )
+    max_attempts = 2
 
-        if not response or not response.text:
-            return None
+    for attempt in range(max_attempts):
+        try:
+            response = client.models.generate_content(
+                model=MODEL_NAME,
+                contents=prompt
+            )
 
-        return response.text.strip()
+            if response and response.text:
+                return response.text.strip()
 
-    except Exception as e:
-        print("Gemini Error:", e)
-        return None
+            print("Gemini returned empty response.")
 
+        except Exception as e:
+            error_message = str(e).upper()
+
+            print("Gemini AI ERROR:", type(e).__name__, e)
+
+            retryable = any(
+                error in error_message
+                for error in [
+                    "503",
+                    "429",
+                    "500",
+                    "502",
+                    "504",
+                    "UNAVAILABLE",
+                    "RESOURCE_EXHAUSTED"
+                ]
+            )
+
+            if not retryable or attempt == max_attempts - 1:
+                return None
+
+            print("Retrying Gemini API...")
+            time.sleep(2)
+
+    return None
+
+# ==========================================
+# HOME PAGE
+# ==========================================
 
 # ==========================================
 # HOME PAGE
@@ -106,24 +123,22 @@ def register():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
+        email = request.form.get("email", "").strip().lower()
+        password = request.form.get("password", "")
 
-        email = request.form["email"]
-        password = request.form["password"]
+        user = User.query.filter_by(email=email).first()
 
-        user = User.query.filter_by(
-            email=email,
-            password=password
-        ).first()
-
-        if user:
+        if user and user.password == password:
             session["user_id"] = user.id
             session["user_name"] = user.fullname
+            print("LOGIN SUCCESS")
             return redirect("/dashboard")
 
+        print("LOGIN FAILED - USER OR PASSWORD NOT MATCHED")
         flash("Invalid Email or Password")
+        return render_template("login.html")
 
     return render_template("login.html")
-
 
 @app.route("/logout")
 def logout():
@@ -143,18 +158,20 @@ def dashboard():
 
 @app.route("/upload", methods=["GET", "POST"])
 def upload():
+
     if "user_id" not in session:
         return redirect("/login")
 
-    summary = ""
     message = ""
 
     if request.method == "POST":
-
         file = request.files.get("pdf")
 
         if not file or file.filename == "":
             message = "Please select a PDF."
+
+        elif not file.filename.lower().endswith(".pdf"):
+            message = "Please upload a PDF file."
 
         else:
             filename = secure_filename(file.filename)
@@ -163,48 +180,37 @@ def upload():
             try:
                 file.save(filepath)
 
-                pdf = fitz.open(filepath)
-                pdf_text = ""
+                with pymupdf.open(filepath) as pdf:
+                    pdf_text = "\n".join(
+                        page.get_text() for page in pdf
+                    )
 
-                for page in pdf:
-                    pdf_text += page.get_text()
+                if not pdf_text.strip():
+                    message = "No readable text found in this PDF."
 
-                pdf.close()
+                else:
+                    session["pdf_text"] = pdf_text[:2500]
 
-                session["pdf_text"] = pdf_text
+                    record = Upload(
+                        filename=filename,
+                        user_id=session["user_id"]
+                    )
 
-                record = Upload(
-                    filename=filename,
-                    user_id=session["user_id"]
-                )
+                    db.session.add(record)
+                    db.session.commit()
 
-                db.session.add(record)
-                db.session.commit()
-
-                prompt = f"""
-                Summarize this PDF in simple English.
-                Explain the important concepts.
-
-                PDF Content:
-                {pdf_text[:3000]}
-                """
-
-                summary = ask_ai(prompt)
-                message = "PDF Uploaded Successfully"
-
-                if not summary:
-                    summary = "AI could not generate summary."
+                    message = "PDF Uploaded Successfully! Go to AI Summary."
 
             except Exception as e:
+                db.session.rollback()
+                print("PDF ERROR:", e)
                 message = f"PDF Error: {e}"
 
     return render_template(
         "upload.html",
-        summary=summary,
+        summary="",
         message=message
     )
-
-
 @app.route("/summary", methods=["GET", "POST"])
 def summary():
     if "user_id" not in session:
@@ -215,17 +221,27 @@ def summary():
     if request.method == "POST":
         pdf_text = session.get("pdf_text", "")
 
-        if pdf_text:
-            prompt = f"Generate a simple study summary:\n{pdf_text[:3000]}"
-            summary_text = ask_ai(prompt)
-        else:
+        if not pdf_text:
             summary_text = "Please upload a PDF first."
+        else:
+            prompt = (
+                "Generate a simple, clear study summary "
+                "with important points and headings:\n"
+                + pdf_text[:3000]
+            )
+
+            summary_text = ask_ai(prompt)
+
+            if not summary_text:
+                summary_text = (
+                    "Gemini AI could not generate the summary. "
+                    "Please check your API quota and try again later."
+                )
 
     return render_template(
         "summary.html",
         summary=summary_text
     )
-
 
 @app.route("/chatbot", methods=["GET", "POST"])
 def chatbot():
