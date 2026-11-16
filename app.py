@@ -9,6 +9,7 @@ import os
 import pymupdf
 import json
 import random
+import time
 
 # Load Environment Variables
 load_dotenv(override=True)
@@ -31,7 +32,6 @@ db.init_app(app)
 with app.app_context():
     db.create_all()
 
-# ==========================================
 # GOOGLE GEMINI CONFIGURATION
 # ==========================================
 
@@ -44,29 +44,55 @@ print("Gemini API Key Loaded:", bool(api_key))
 
 client = genai.Client(api_key=api_key)
 
-MODEL_NAME = "gemini-3.8-flash"
+MODEL_NAME = "gemini-3.5-flash-lite"
+print("Gemini Model:", MODEL_NAME)
+
 
 # ==========================================
 # COMMON AI FUNCTION
 # ==========================================
 
 def ask_ai(prompt):
-    try:
-        response = client.models.generate_content(
-            model=MODEL_NAME,
-            contents=prompt
-        )
+    max_attempts = 2
 
-        if response and response.text:
-            return response.text.strip()
+    for attempt in range(max_attempts):
+        try:
+            response = client.models.generate_content(
+                model=MODEL_NAME,
+                contents=prompt
+            )
 
-        print("Gemini returned an empty response.")
-        return None
+            if response and response.text:
+                return response.text.strip()
 
-    except Exception as e:
-        print("Gemini AI ERROR:", type(e).__name__, e)
-        return None
+            print("Gemini returned empty response.")
 
+        except Exception as e:
+            error_message = str(e).upper()
+            print("Gemini AI ERROR:", type(e).__name__, e)
+
+            retryable = any(
+                error in error_message
+                for error in [
+                    "503", "429", "500",
+                    "502", "504",
+                    "UNAVAILABLE",
+                    "RESOURCE_EXHAUSTED"
+                ]
+            )
+
+            if not retryable or attempt == max_attempts - 1:
+                return None
+
+            print("Retrying Gemini API...")
+            time.sleep(2)
+
+    return None
+    
+
+# ==========================================
+# HOME PAGE
+# ==========================================
 
 # ==========================================
 # HOME PAGE
@@ -134,9 +160,6 @@ def login():
         return render_template("login.html")
 
     return render_template("login.html")
-# ==========================================
-# LOGOUT
-# ==========================================
 
 @app.route("/logout")
 def logout():
@@ -178,8 +201,10 @@ def upload():
 
         if not file or file.filename == "":
             message = "Please select a PDF."
+
         elif not file.filename.lower().endswith(".pdf"):
             message = "Please upload a PDF file."
+
         else:
             filename = secure_filename(file.filename)
             filepath = os.path.join(UPLOAD_FOLDER, filename)
@@ -188,10 +213,13 @@ def upload():
                 file.save(filepath)
 
                 with pymupdf.open(filepath) as pdf:
-                    pdf_text = "\n".join(page.get_text() for page in pdf)
+                    pdf_text = "\n".join(
+                        page.get_text() for page in pdf
+                    )
 
                 if not pdf_text.strip():
                     message = "No readable text found in this PDF."
+
                 else:
                     session["pdf_text"] = pdf_text[:2500]
 
@@ -199,6 +227,7 @@ def upload():
                         filename=filename,
                         user_id=session["user_id"]
                     )
+
                     db.session.add(record)
                     db.session.commit()
 
@@ -214,11 +243,6 @@ def upload():
         summary="",
         message=message
     )
-
-
-# SUMMARY PAGE
-# ==========================================
-
 @app.route("/summary", methods=["GET", "POST"])
 def summary():
 
@@ -233,6 +257,20 @@ def summary():
 
         if not pdf_text:
             summary_text = "Please upload a PDF first."
+        else:
+            prompt = (
+                "Generate a simple, clear study summary "
+                "with important points and headings:\n"
+                + pdf_text[:3000]
+            )
+
+            summary_text = ask_ai(prompt)
+
+            if not summary_text:
+                summary_text = (
+                    "Gemini AI could not generate the summary. "
+                    "Please check your API quota and try again later."
+                )
 
         else:
             prompt = f"""
@@ -255,11 +293,6 @@ def summary():
         "summary.html",
         summary=summary_text
     )
-
-
-# ==========================================
-# AI CHATBOT
-# ==========================================
 
 @app.route("/chatbot", methods=["GET", "POST"])
 def chatbot():
